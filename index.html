@@ -26,17 +26,15 @@
       margin-bottom:14px;
     }
     label{display:block; font-size:.9rem; font-weight:600; color:#374151}
-    input[type="number"], select, .btn, .range{
+    input[type="number"], .btn{
       width:100%; border-radius:16px; border:1px solid var(--border);
       padding:12px 14px; font-size:1.1rem; outline:none; background:#fff;
       box-shadow:0 1px 0 rgba(0,0,0,.02);
     }
-    input[type="number"]:focus, select:focus{border-color:var(--ring); box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+    input[type="number"]:focus{border-color:var(--ring); box-shadow:0 0 0 3px rgba(16,185,129,.15)}
     .hint{font-size:.78rem; color:var(--muted); margin:6px 2px 0}
     .grid{display:grid; grid-template-columns:1fr; gap:12px}
-    @media(min-width:768px){ .grid-2{grid-template-columns:1fr 1fr} .grid-3{grid-template-columns:2fr 1fr 1fr} }
-    .actions{display:grid; grid-template-columns:1fr; gap:10px}
-    @media(min-width:768px){ .actions{grid-template-columns:1fr 1fr} }
+    .actions{display:grid; grid-template-columns:1fr 1fr; gap:10px}
     .btn{cursor:pointer; font-weight:600}
     .btn.primary{background:var(--primary); color:#fff; border-color:transparent}
     .btn.primary:hover{background:var(--primary-2)}
@@ -51,6 +49,7 @@
     .topbar{display:flex; align-items:center; justify-content:space-between; gap:8px}
     .toggle{font-size:.8rem; border-radius:999px; padding:6px 10px; border:1px solid var(--border); background:#fff; cursor:pointer}
     .footer{font-size:.72rem; color:var(--muted); text-align:center; padding:8px 0 24px}
+    .badge{display:inline-block; background:#e6fff6; color:#035e43; border:1px solid #b6f2dd; padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:600}
   </style>
 </head>
 <body>
@@ -74,30 +73,6 @@
         </div>
       </div>
 
-      <div class="grid grid-3" style="margin-top:10px">
-        <div class="row">
-          <label for="margin">Margen estimado (±%)</label>
-          <input id="margin" class="range" type="range" min="5" max="12" step="0.5" value="8" />
-          <div class="hint">Actual: <b id="marginVal">±8%</b></div>
-        </div>
-        <div class="row">
-          <label for="round">Redondeo (kg)</label>
-          <select id="round">
-            <option value="1">1 kg</option>
-            <option value="2">2 kg</option>
-            <option value="5">5 kg</option>
-            <option value="10">10 kg</option>
-          </select>
-        </div>
-        <div class="row">
-          <label for="notes">Formato</label>
-          <select id="fmt">
-            <option value="es">1 234,5</option>
-            <option value="en">1,234.5</option>
-          </select>
-        </div>
-      </div>
-
       <div class="actions" style="margin-top:12px">
         <button id="copyBtn" class="btn primary" disabled>Copiar resultado</button>
         <button id="resetBtn" class="btn ghost">Limpiar</button>
@@ -106,8 +81,9 @@
       <div class="result" id="resultBox">
         <div class="main" id="mainResult">Ingresa PT y LC</div>
         <div class="sub" id="subResult" style="display:none"></div>
-        <div class="tiny">Fórmula: (PT² × LC) / 10840. Entradas en cm. Resultado en kg.</div>
+        <div class="tiny">Fórmula: (PT² × LC) / 10840. Entradas en cm. Resultado en kg (1 decimal).</div>
       </div>
+      <div class="hint" style="margin-top:8px">Rango fijo de variación: <span class="badge">±8%</span></div>
     </div>
 
     <div class="card">
@@ -115,7 +91,7 @@
       <ul style="margin:0; padding-left:18px; color:#374151; font-size:.95rem">
         <li>Animal parado derecho, piso plano, cuello en posición neutra.</li>
         <li>Misma cinta y tensión; toma 2–3 lecturas y promedia.</li>
-        <li>Mejor antes de alimentar/regar para reducir efecto ruminal.</li>
+        <li>Mejor antes de beber agua para reducir el efecto de llenado ruminal.</li>
         <li>Razas muy cebuinas o condición corporal extrema pueden sesgar.</li>
       </ul>
     </div>
@@ -126,35 +102,36 @@
 <script>
 (function(){
   const $ = (id)=>document.getElementById(id);
-  const ptEl = $("pt"), lcEl = $("lc"), marginEl = $("margin"), roundEl = $("round"), fmtEl=$("fmt");
-  const mainResult = $("mainResult"), subResult = $("subResult"), marginVal = $("marginVal");
+  const ptEl = $("pt"), lcEl = $("lc");
+  const mainResult = $("mainResult"), subResult = $("subResult");
   const copyBtn = $("copyBtn"), resetBtn = $("resetBtn"), toggleMode = $("toggleMode");
   const resultBox = $("resultBox");
 
-  // SW registration
+  // Configuración fija
+  const USER_LOCALE = (navigator.language || 'es-ES');
+  const MARGIN_FIXED = 0.08; // ±8%
+  const DECIMALS = 1; // 1 decimal
+
+  // Registrar SW
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(console.error);
     });
   }
 
-  // Load saved state
+  function save(){
+    const obj = {pt:ptEl.value, lc:lcEl.value};
+    localStorage.setItem("bovine-weight-calc-offline", JSON.stringify(obj));
+  }
+
+  // Cargar estado
   try {
     const saved = JSON.parse(localStorage.getItem("bovine-weight-calc-offline")||"null");
     if (saved){
       if (saved.pt!=null) ptEl.value = saved.pt;
       if (saved.lc!=null) lcEl.value = saved.lc;
-      if (saved.margin!=null) marginEl.value = saved.margin;
-      if (saved.round!=null) roundEl.value = saved.round;
-      if (saved.fmt!=null) fmtEl.value = saved.fmt;
-      marginVal.textContent = `±${marginEl.value}%`;
     }
   } catch(e){}
-
-  function save(){
-    const obj = {pt:ptEl.value, lc:lcEl.value, margin:marginEl.value, round:roundEl.value, fmt:fmtEl.value};
-    localStorage.setItem("bovine-weight-calc-offline", JSON.stringify(obj));
-  }
 
   function parseNum(v){
     if (typeof v === "string") v = v.replace(",", ".");
@@ -162,21 +139,18 @@
     return Number.isFinite(x) ? x : NaN;
   }
 
-  function format(n){
-    const locale = fmtEl.value === "en" ? "en-US" : "es-ES";
-    return n.toLocaleString(locale);
+  function fmt(n){
+    return n.toLocaleString(USER_LOCALE, {minimumFractionDigits:DECIMALS, maximumFractionDigits:DECIMALS});
   }
 
-  function roundTo(n, r){
-    if (!r || r<=0) return Math.round(n);
-    return Math.round(n/r)*r;
+  function roundToDec(n, d){
+    const m = Math.pow(10, d);
+    return Math.round(n*m)/m;
   }
 
   function compute(){
     const pt = parseNum(ptEl.value);
     const lc = parseNum(lcEl.value);
-    const margin = parseFloat(marginEl.value);
-    const rnd = parseFloat(roundEl.value);
 
     if (!isFinite(pt) || !isFinite(lc) || pt<=0 || lc<=0){
       mainResult.textContent = "Ingresa PT y LC";
@@ -185,13 +159,13 @@
       return;
     }
     const raw = (pt*pt*lc)/10840;
-    const rounded = roundTo(raw, rnd);
-    const delta = (rounded * margin)/100;
-    const low = roundTo(Math.max(0, rounded - delta), rnd);
-    const high = roundTo(rounded + delta, rnd);
+    const rounded = roundToDec(raw, DECIMALS);
+    const delta = rounded * MARGIN_FIXED;
+    const low = roundToDec(Math.max(0, rounded - delta), DECIMALS);
+    const high = roundToDec(rounded + delta, DECIMALS);
 
-    mainResult.textContent = `Peso estimado: ${format(rounded)} kg`;
-    subResult.textContent = `Rango ±${margin}%: ${format(low)}–${format(high)} kg`;
+    mainResult.textContent = `Peso estimado: ${fmt(rounded)} kg`;
+    subResult.textContent = `Rango ±8%: ${fmt(low)}–${fmt(high)} kg`;
     subResult.style.display = "block";
     copyBtn.disabled = false;
   }
@@ -209,8 +183,7 @@
   }
 
   function reset(){
-    ptEl.value = ""; lcEl.value = ""; marginEl.value = 8; roundEl.value = 1; fmtEl.value="es";
-    marginVal.textContent = "±8%";
+    ptEl.value = ""; lcEl.value = "";
     save(); compute();
   }
 
@@ -222,8 +195,7 @@
     resultBox.querySelector(".main").style.fontSize = on ? "1.4rem" : "1.6rem";
   }
 
-  [ptEl, lcEl, roundEl, fmtEl].forEach(el => el.addEventListener("input", ()=>{save(); compute();}));
-  marginEl.addEventListener("input", ()=>{ marginVal.textContent = `±${marginEl.value}%`; save(); compute(); });
+  [ptEl, lcEl].forEach(el => el.addEventListener("input", ()=>{save(); compute();}));
   copyBtn.addEventListener("click", copy);
   resetBtn.addEventListener("click", reset);
   toggleMode.addEventListener("click", toggle);
