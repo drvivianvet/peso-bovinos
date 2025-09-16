@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora de Peso Bovino (Métrico)</title>
+  <meta name="theme-color" content="#10b981" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+  <style>
+    :root{
+      --bg:#f7f8fb; --card:#ffffff; --text:#111827; --muted:#6b7280;
+      --primary:#059669; --primary-2:#047857; --ring:#10b981; --border:#e5e7eb;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    .container{max-width:640px; margin:0 auto; padding:16px 16px 24px}
+    h1{font-size:1.5rem; margin:8px 0 16px; font-weight:600}
+    .card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:20px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.04);
+      margin-bottom:14px;
+    }
+    label{display:block; font-size:.9rem; font-weight:600; color:#374151}
+    input[type="number"], select, .btn, .range{
+      width:100%; border-radius:16px; border:1px solid var(--border);
+      padding:12px 14px; font-size:1.1rem; outline:none; background:#fff;
+      box-shadow:0 1px 0 rgba(0,0,0,.02);
+    }
+    input[type="number"]:focus, select:focus{border-color:var(--ring); box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+    .hint{font-size:.78rem; color:var(--muted); margin:6px 2px 0}
+    .grid{display:grid; grid-template-columns:1fr; gap:12px}
+    @media(min-width:768px){ .grid-2{grid-template-columns:1fr 1fr} .grid-3{grid-template-columns:2fr 1fr 1fr} }
+    .actions{display:grid; grid-template-columns:1fr; gap:10px}
+    @media(min-width:768px){ .actions{grid-template-columns:1fr 1fr} }
+    .btn{cursor:pointer; font-weight:600}
+    .btn.primary{background:var(--primary); color:#fff; border-color:transparent}
+    .btn.primary:hover{background:var(--primary-2)}
+    .btn.ghost{background:#fff}
+    .result{
+      background:#eef2f7; border-radius:16px; padding:14px; margin-top:12px;
+    }
+    .result .main{font-size:1.4rem; font-weight:700}
+    .result .sub{font-size:.95rem; color:#374151; margin-top:4px}
+    .tiny{font-size:.78rem; color:var(--muted); margin-top:8px}
+    .row{margin-bottom:10px}
+    .topbar{display:flex; align-items:center; justify-content:space-between; gap:8px}
+    .toggle{font-size:.8rem; border-radius:999px; padding:6px 10px; border:1px solid var(--border); background:#fff; cursor:pointer}
+    .footer{font-size:.72rem; color:var(--muted); text-align:center; padding:8px 0 24px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h1>🐄 Calculadora de peso bovino (métrico)</h1>
+      <button id="toggleMode" class="toggle" title="Alternar tamaño">Modo campo</button>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div class="row">
+          <label for="pt">Perímetro torácico (cm)</label>
+          <input id="pt" type="number" inputmode="decimal" step="0.1" min="60" max="300" placeholder="Ej. 190.0" />
+          <div class="hint">Medir justo detrás de las patas delanteras, pasando por la cruz.</div>
+        </div>
+        <div class="row">
+          <label for="lc">Longitud corporal (cm)</label>
+          <input id="lc" type="number" inputmode="decimal" step="0.1" min="80" max="300" placeholder="Ej. 150.0" />
+          <div class="hint">Desde la punta del hombro (escápulo-humeral) hasta la punta del isquion (“pins”).</div>
+        </div>
+      </div>
+
+      <div class="grid grid-3" style="margin-top:10px">
+        <div class="row">
+          <label for="margin">Margen estimado (±%)</label>
+          <input id="margin" class="range" type="range" min="5" max="12" step="0.5" value="8" />
+          <div class="hint">Actual: <b id="marginVal">±8%</b></div>
+        </div>
+        <div class="row">
+          <label for="round">Redondeo (kg)</label>
+          <select id="round">
+            <option value="1">1 kg</option>
+            <option value="2">2 kg</option>
+            <option value="5">5 kg</option>
+            <option value="10">10 kg</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="notes">Formato</label>
+          <select id="fmt">
+            <option value="es">1 234,5</option>
+            <option value="en">1,234.5</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <button id="copyBtn" class="btn primary" disabled>Copiar resultado</button>
+        <button id="resetBtn" class="btn ghost">Limpiar</button>
+      </div>
+
+      <div class="result" id="resultBox">
+        <div class="main" id="mainResult">Ingresa PT y LC</div>
+        <div class="sub" id="subResult" style="display:none"></div>
+        <div class="tiny">Fórmula: (PT² × LC) / 10840. Entradas en cm. Resultado en kg.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 8px; font-size:1.05rem">Consejos de medición</h2>
+      <ul style="margin:0; padding-left:18px; color:#374151; font-size:.95rem">
+        <li>Animal parado derecho, piso plano, cuello en posición neutra.</li>
+        <li>Misma cinta y tensión; toma 2–3 lecturas y promedia.</li>
+        <li>Mejor antes de alimentar/regar para reducir efecto ruminal.</li>
+        <li>Razas muy cebuinas o condición corporal extrema pueden sesgar.</li>
+      </ul>
+    </div>
+
+    <div class="footer">Esta herramienta estima el peso; no reemplaza una báscula.</div>
+  </div>
+
+<script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+  const ptEl = $("pt"), lcEl = $("lc"), marginEl = $("margin"), roundEl = $("round"), fmtEl=$("fmt");
+  const mainResult = $("mainResult"), subResult = $("subResult"), marginVal = $("marginVal");
+  const copyBtn = $("copyBtn"), resetBtn = $("resetBtn"), toggleMode = $("toggleMode");
+  const resultBox = $("resultBox");
+
+  // SW registration
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(console.error);
+    });
+  }
+
+  // Load saved state
+  try {
+    const saved = JSON.parse(localStorage.getItem("bovine-weight-calc-offline")||"null");
+    if (saved){
+      if (saved.pt!=null) ptEl.value = saved.pt;
+      if (saved.lc!=null) lcEl.value = saved.lc;
+      if (saved.margin!=null) marginEl.value = saved.margin;
+      if (saved.round!=null) roundEl.value = saved.round;
+      if (saved.fmt!=null) fmtEl.value = saved.fmt;
+      marginVal.textContent = `±${marginEl.value}%`;
+    }
+  } catch(e){}
+
+  function save(){
+    const obj = {pt:ptEl.value, lc:lcEl.value, margin:marginEl.value, round:roundEl.value, fmt:fmtEl.value};
+    localStorage.setItem("bovine-weight-calc-offline", JSON.stringify(obj));
+  }
+
+  function parseNum(v){
+    if (typeof v === "string") v = v.replace(",", ".");
+    const x = parseFloat(v);
+    return Number.isFinite(x) ? x : NaN;
+  }
+
+  function format(n){
+    const locale = fmtEl.value === "en" ? "en-US" : "es-ES";
+    return n.toLocaleString(locale);
+  }
+
+  function roundTo(n, r){
+    if (!r || r<=0) return Math.round(n);
+    return Math.round(n/r)*r;
+  }
+
+  function compute(){
+    const pt = parseNum(ptEl.value);
+    const lc = parseNum(lcEl.value);
+    const margin = parseFloat(marginEl.value);
+    const rnd = parseFloat(roundEl.value);
+
+    if (!isFinite(pt) || !isFinite(lc) || pt<=0 || lc<=0){
+      mainResult.textContent = "Ingresa PT y LC";
+      subResult.style.display="none";
+      copyBtn.disabled = true;
+      return;
+    }
+    const raw = (pt*pt*lc)/10840;
+    const rounded = roundTo(raw, rnd);
+    const delta = (rounded * margin)/100;
+    const low = roundTo(Math.max(0, rounded - delta), rnd);
+    const high = roundTo(rounded + delta, rnd);
+
+    mainResult.textContent = `Peso estimado: ${format(rounded)} kg`;
+    subResult.textContent = `Rango ±${margin}%: ${format(low)}–${format(high)} kg`;
+    subResult.style.display = "block";
+    copyBtn.disabled = false;
+  }
+
+  function copy(){
+    const txt = `${mainResult.textContent}${subResult.style.display!=='none' ? ' ('+subResult.textContent+')' : ''}`;
+    if (!txt || /Ingresa PT/.test(txt)) return;
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(()=>alert("Resultado copiado"));
+    } else {
+      const ta=document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+      alert("Resultado copiado");
+    }
+  }
+
+  function reset(){
+    ptEl.value = ""; lcEl.value = ""; marginEl.value = 8; roundEl.value = 1; fmtEl.value="es";
+    marginVal.textContent = "±8%";
+    save(); compute();
+  }
+
+  function toggle(){
+    const on = document.body.dataset.field === "1";
+    document.body.dataset.field = on ? "0" : "1";
+    toggleMode.textContent = on ? "Modo campo" : "Modo compacto";
+    document.documentElement.style.setProperty("font-size", on ? "16px" : "18px");
+    resultBox.querySelector(".main").style.fontSize = on ? "1.4rem" : "1.6rem";
+  }
+
+  [ptEl, lcEl, roundEl, fmtEl].forEach(el => el.addEventListener("input", ()=>{save(); compute();}));
+  marginEl.addEventListener("input", ()=>{ marginVal.textContent = `±${marginEl.value}%`; save(); compute(); });
+  copyBtn.addEventListener("click", copy);
+  resetBtn.addEventListener("click", reset);
+  toggleMode.addEventListener("click", toggle);
+
+  compute();
+})();</script>
+</body>
+</html>
