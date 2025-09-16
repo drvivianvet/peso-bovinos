@@ -1,5 +1,5 @@
-// Service worker v4 (cache bump)
-const CACHE_NAME = 'bovine-pwa-v4';
+// Service worker v5 (cache bump)
+const CACHE_NAME = 'bovine-pwa-v5';
 const ASSETS = [
   './',
   './index.html',

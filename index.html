@@ -16,12 +16,12 @@
     html,body{height:100%}
     body{
       margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
-      background:var(--bg); color:var(--text);
+      background:var(--bg); color:#111827;
     }
     .container{max-width:640px; margin:0 auto; padding:16px 16px 24px}
     h1{font-size:1.5rem; margin:8px 0 16px; font-weight:600}
     .card{
-      background:var(--card); border:1px solid var(--border);
+      background:#ffffff; border:1px solid var(--border);
       border-radius:20px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.04);
       margin-bottom:14px;
     }
@@ -44,11 +44,11 @@
     }
     .result .main{font-size:1.4rem; font-weight:700}
     .result .sub{font-size:.95rem; color:#374151; margin-top:4px}
-    .tiny{font-size:.78rem; color:var(--muted); margin-top:8px}
+    .tiny{font-size:.78rem; color:#6b7280; margin-top:8px}
     .row{margin-bottom:10px}
     .topbar{display:flex; align-items:center; justify-content:space-between; gap:8px}
     .toggle{font-size:.8rem; border-radius:999px; padding:6px 10px; border:1px solid var(--border); background:#fff; cursor:pointer}
-    .footer{font-size:.72rem; color:var(--muted); text-align:center; padding:8px 0 24px}
+    .footer{font-size:.72rem; color:#6b7280; text-align:center; padding:8px 0 24px}
     .badge{display:inline-block; background:#e6fff6; color:#035e43; border:1px solid #b6f2dd; padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:600}
   </style>
 </head>
@@ -81,9 +81,8 @@
       <div class="result" id="resultBox">
         <div class="main" id="mainResult">Ingresa PT y LC</div>
         <div class="sub" id="subResult" style="display:none"></div>
-        <div class="tiny">Fórmula: (PT² × LC) / 10840. Entradas en cm. Resultado en kg (1 decimal).</div>
+        <div class="tiny">Fórmula: (PT² × LC) / 10840. Entradas en cm. Resultado en kg (1 decimal). Rango fijo de variación: <span class="badge">±8%</span>.</div>
       </div>
-      <div class="hint" style="margin-top:8px">Rango fijo de variación: <span class="badge">±8%</span></div>
     </div>
 
     <div class="card">
@@ -91,7 +90,7 @@
       <ul style="margin:0; padding-left:18px; color:#374151; font-size:.95rem">
         <li>Animal parado derecho, piso plano, cuello en posición neutra.</li>
         <li>Misma cinta y tensión; toma 2–3 lecturas y promedia.</li>
-        <li>Mejor antes de beber agua para reducir el efecto de llenado ruminal.</li>
+        <li>Mejor antes de comer y beber agua para reducir el efecto de llenado ruminal.</li>
         <li>Razas muy cebuinas o condición corporal extrema pueden sesgar.</li>
       </ul>
     </div>
@@ -107,12 +106,10 @@
   const copyBtn = $("copyBtn"), resetBtn = $("resetBtn"), toggleMode = $("toggleMode");
   const resultBox = $("resultBox");
 
-  // Configuración fija
   const USER_LOCALE = (navigator.language || 'es-ES');
   const MARGIN_FIXED = 0.08; // ±8%
   const DECIMALS = 1; // 1 decimal
 
-  // Registrar SW
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(console.error);
@@ -124,7 +121,6 @@
     localStorage.setItem("bovine-weight-calc-offline", JSON.stringify(obj));
   }
 
-  // Cargar estado
   try {
     const saved = JSON.parse(localStorage.getItem("bovine-weight-calc-offline")||"null");
     if (saved){
